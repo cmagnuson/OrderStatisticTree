@@ -1,4 +1,4 @@
-package net.coderodde.util;
+package com.mtecresults.ranking;
 
 import java.util.ArrayList;
 import java.util.Iterator;

@@ -1,4 +1,4 @@
-package net.coderodde.util;
+package com.mtecresults.ranking;
 
 import java.util.Set;
 
@@ -15,7 +15,7 @@ import java.util.Set;
  * @author Rodion "rodde" Efremov
  * @version 1.6 (Feb 16, 2016)
  */
-public interface OrderStatisticSet<T> extends Set<T> {
+public interface OrderStatisticSet<T> {
     
     /**
      * Returns the <code>index</code>th smallest element from this set.
@@ -23,7 +23,7 @@ public interface OrderStatisticSet<T> extends Set<T> {
      * @param index the element index.
      * @return the <code>index</code>th smallest element.
      */
-    T get(int index);
+    Set<T> get(int index);
     
     /**
      * Returns the index of <code>element</code> in the sorted set.
@@ -33,4 +33,10 @@ public interface OrderStatisticSet<T> extends Set<T> {
      *         in this set.
      */
     int indexOf(T element);
+
+    boolean remove(T o);
+
+    int size();
+
+    boolean add(T element);
 }
