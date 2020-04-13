@@ -6,7 +6,7 @@ import java.util.Set;
  * This interface defines the API for an order statistic set. An order statistic
  * set is a sorted set that provides two additional methods:
  * <ul>
- *   <li><code>get(int index)</code> returns the <code><index</code>th smallest
+ *   <li><code>get(int index)</code> returns the <code>index</code>th smallest
  *       element,</li>
  *   <li><code>indexOf(T element)</code> returns the index of the input element.
  *   </li>
