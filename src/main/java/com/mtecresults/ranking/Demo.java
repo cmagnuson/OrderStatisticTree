@@ -92,7 +92,7 @@ public class Demo {
         startTime = System.nanoTime();
         
         for (int i = 0; i < n; ++i) {
-            orderTree.get(i);
+            orderTree.get(i + 1);
         }
         
         endTime = System.nanoTime();

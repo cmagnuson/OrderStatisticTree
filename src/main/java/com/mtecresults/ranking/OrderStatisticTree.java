@@ -41,8 +41,6 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
                     // The element needs to be added to this node
                     node.add(element);
                     size++;
-                    //FIXME: ensure this is correct!!!  Needs testing
-                    node.count++;
                     incrementChildren(node.parent, node);
                     return true;
                 }
@@ -109,17 +107,15 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
             }
         }
 
-        if (x == null) {
+        if (x == null || !x.contains(element)) {
             return false;
         }
 
         if(x.size() > 1){
             //remove this entry from node, leaving it non-empty
             x.remove(element);
-            //FIXME: ensure this counting is correct!!!  Needs testing
-            x.count--;
-            decrementChildren(x.parent, x);
             decrementSize();
+            decrementChildren(x.parent, x);
             return true;
         }
 
@@ -130,13 +126,21 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
     }
 
     @Override
+    //get based on place - 1 based
+    //may return empty set if there is a tie so intermediate place does not exist
     public Set<T> get(int index) {
+        //adjust index supplied to be 0 based internally
+        index--;
+
         checkIndex(index);
         Node<T> node = root;
 
         while (true) {
+            if(node == null){
+                return Collections.EMPTY_SET;
+            }
             if (index > node.count) {
-                index -= node.count + 1;
+                index -= node.count + node.size();
                 node = node.right;
             } else if (index < node.count) {
                 node = node.left;
@@ -146,8 +150,19 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
         }
     }
 
-    @Override
-    public int indexOf(T element) {
+    //kept in to keep older test cases working
+    //indexOf 0 based behavior
+    protected int indexOf(T element){
+        int index = rankOf(element);
+        if(index > 0){
+            index--;
+        }
+        return index;
+    }
+
+    //1 based rank of element in tree
+    //return -1 if not found
+    public int rankOf(T element) {
         Node<T> node = root;
 
         if (root == null) {
@@ -158,7 +173,8 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
         int cmp;
 
         while (true) {
-            if ((cmp = -1 * node.compareTo(element)) < 0) {
+            cmp = -1 * node.compareTo(element);
+            if (cmp < 0) {
                 if (node.left == null) {
                     return -1;
                 }
@@ -170,9 +186,11 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
                     return -1;
                 }
 
-                rank += 1 + node.right.count;
+                rank += node.size() + node.right.count;
                 node = node.right;
             } else {
+                //adjust for ties
+                //rank -= node.size() - 1;
                 break;
             }
         }
@@ -180,6 +198,8 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
         if(!node.contains(element)){
             return -1;
         }
+        //adjust to be 1 based
+        rank++;
         return rank;
     }
 
@@ -308,7 +328,7 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
 
         node1.height = Math.max(height(node1.left), height(node1.right)) + 1;
         node2.height = Math.max(height(node2.left), height(node2.right)) + 1;
-        node2.count += node1.count + 1;
+        node2.count += node1.count + node1.size();
         return node2;
     }
 
@@ -325,7 +345,7 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
 
         node1.height = Math.max(height(node1.left), height(node1.right)) + 1;
         node2.height = Math.max(height(node2.left), height(node2.right)) + 1;
-        node1.count -= node2.count + 1;
+        node1.count -= node2.count + node2.size();
         return node2;
     }
 
