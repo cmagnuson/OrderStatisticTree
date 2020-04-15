@@ -194,6 +194,8 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
         }
     }
 
+    //FIXME: this is no longer valid - size may be > # of nodes since some nodes may have multiple entries
+    //should add another counter of total # of nodes??
     private void checkIndex(int index) {
         if (index < 0) {
             throw new IndexOutOfBoundsException(
