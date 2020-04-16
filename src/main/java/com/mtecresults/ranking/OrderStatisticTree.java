@@ -187,8 +187,9 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
         Node<T> left;
         Node<T> right;
 
-        int height;
-        int count;
+        int height = 0;
+        int count = 0;
+        int duplicateCount = 1;
 
         Node(T key) {
             this.key = key;
@@ -219,7 +220,12 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
 
             if (cmp == 0) {
                 // The element is already in this tree.
-                return false;
+                // add to it
+                node.duplicateCount++;
+                size++;
+                modCount++;
+                incrementParents(parent, node);
+                return true;
             }
 
             parent = node;
@@ -242,9 +248,13 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
         newnode.parent = parent;
         size++;
         modCount++;
-        Node<T> hi = parent;
-        Node<T> lo = newnode;
+        incrementParents(parent, newnode);
 
+        fixAfterModification(newnode, true);
+        return true;
+    }
+
+    private void incrementParents(Node<T> hi, Node<T> lo){
         while (hi != null) {
             if (hi.left == lo) {
                 hi.count++;
@@ -253,9 +263,6 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
             lo = hi;
             hi = hi.parent;
         }
-
-        fixAfterModification(newnode, true);
-        return true;
     }
 
     @Override
@@ -293,6 +300,14 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
             return false;
         }
 
+        x.duplicateCount--;
+        if(x.duplicateCount > 0){
+            //removed a duplicate but this node shouldn't be removed
+            decrementParents(x.parent, x);
+            modCount += decrementSize();
+            return true;
+        }
+
         x = deleteNode(x);
         fixAfterModification(x, false);
         modCount += decrementSize();
@@ -301,6 +316,14 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
 
     @Override
     public T get(int index) {
+       return getNodeForIndex(index).key;
+    }
+
+    public int getDuplicateCount(int index){
+        return getNodeForIndex(index).duplicateCount;
+    }
+
+    protected Node<T> getNodeForIndex(int index){
         checkIndex(index);
         Node<T> node = root;
 
@@ -311,7 +334,7 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
             } else if (index < node.count) {
                 node = node.left;
             } else {
-                return node.key;
+                return node;
             }
         }
     }
@@ -401,6 +424,17 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
         }
     }
 
+    private void decrementParents(Node<T> hi, Node<T> lo){
+        while (hi != null) {
+            if (hi.left == lo) {
+                hi.count--;
+            }
+
+            lo = hi;
+            hi = hi.parent;
+        }
+    }
+
     private Node<T> deleteNode(Node<T> node) {
         if (node.left == null && node.right == null) {
             // 'node' has no children.
@@ -414,17 +448,7 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
                 return node;
             }
 
-            Node<T> lo = node;
-            Node<T> hi = parent;
-
-            while (hi != null) {
-                if (hi.left == lo) {
-                    hi.count--;
-                }
-
-                lo = hi;
-                hi = hi.parent;
-            }
+            decrementParents(parent, node);
 
             if (node == parent.left) {
                 parent.left = null;
@@ -459,17 +483,7 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
                 parent.right = child;
             }
 
-            Node<T> hi = parent;
-            Node<T> lo = child;
-
-            while (hi != null) {
-                if (hi.left == lo) {
-                    hi.count--;
-                }
-
-                lo = hi;
-                hi = hi.parent;
-            }
+            decrementParents(parent, child);
 
             return node;
         }
@@ -491,17 +505,7 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
             child.parent = parent;
         }
 
-        Node<T> lo = child;
-        Node<T> hi = parent;
-
-        while (hi != null) {
-            if (hi.left == lo) {
-                hi.count--;
-            }
-
-            lo = hi;
-            hi = hi.parent;
-        }
+        decrementParents(parent, child);
 
         successor.key = tmpKey;
         return successor;
@@ -659,12 +663,12 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
                 && isWellIndexed();
     }
 
-    private boolean containsCycles() {
+    protected boolean containsCycles() {
         Set<Node<T>> visitedNodes = new HashSet<>();
         return containsCycles(root, visitedNodes);
     }
 
-    private boolean containsCycles(Node<T> current, Set<Node<T>> visitedNodes) {
+    protected boolean containsCycles(Node<T> current, Set<Node<T>> visitedNodes) {
         if (current == null) {
             return false;
         }
@@ -679,7 +683,7 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
                 || containsCycles(current.right, visitedNodes);
     }
 
-    private boolean heightsAreCorrect() {
+    protected boolean heightsAreCorrect() {
         return getHeight(root) == root.height;
     }
 
@@ -707,7 +711,7 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
         return Integer.MIN_VALUE;
     }
 
-    private boolean isBalanced() {
+    protected boolean isBalanced() {
         return isBalanced(root);
     }
 
@@ -730,7 +734,7 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
         return Math.abs(leftHeight - rightHeight) < 2;
     }
 
-    private boolean isWellIndexed() {
+    protected boolean isWellIndexed() {
         return size == count(root);
     }
 
@@ -741,20 +745,12 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
 
         int leftTreeSize = count(node.left);
 
-        if (leftTreeSize == Integer.MIN_VALUE) {
-            return Integer.MIN_VALUE;
-        }
-
         if (node.count != leftTreeSize) {
-            return Integer.MIN_VALUE;
+            throw new RuntimeException("Node count not equal to left tree size: "+node.count+" "+leftTreeSize);
         }
 
         int rightTreeSize = count(node.right);
 
-        if (rightTreeSize == Integer.MIN_VALUE) {
-            return Integer.MIN_VALUE;
-        }
-
-        return leftTreeSize + 1 + rightTreeSize;
+        return leftTreeSize + node.duplicateCount + rightTreeSize;
     }
 }

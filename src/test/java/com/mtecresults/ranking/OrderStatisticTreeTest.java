@@ -2,6 +2,7 @@ package com.mtecresults.ranking;
 
 import java.util.*;
 
+import com.google.common.collect.HashMultiset;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.Before;
@@ -9,7 +10,7 @@ import org.junit.Before;
 public class OrderStatisticTreeTest {
     
     private final OrderStatisticTree<Integer> tree = new OrderStatisticTree<>();
-    private final TreeSet<Integer> set = new TreeSet<>();
+    private final HashMultiset<Integer> set = HashMultiset.create();
     
     @Before
     public void before() {
@@ -28,6 +29,10 @@ public class OrderStatisticTreeTest {
             assertEquals(set.add(i), tree.add(i));
             assertEquals(set.contains(i), tree.contains(i));
 
+            assertTrue(!tree.containsCycles());
+            assertTrue(tree.heightsAreCorrect());
+            assertTrue(tree.isBalanced());
+            assertTrue(tree.isWellIndexed());
             assertTrue(tree.isHealthy());
         }
         
@@ -271,4 +276,58 @@ public class OrderStatisticTreeTest {
             assertTrue(healthy);
         }
     }
+
+    @Test
+    public void testDuplicatesRandom() {
+        ArrayList<Integer> set = new ArrayList<>();
+        OrderStatisticTree<Integer> tree = new OrderStatisticTree<>();
+
+        int maxValue = 10_000;
+        for(int i=0; i<100_000; i++){
+            //decide randomly to add or delete, weighted towards adding
+            boolean add = Math.random() > 0.3;
+            if(add){
+                Integer toAdd = i; //(int)(Math.random()*maxValue);
+                set.add(toAdd);
+                tree.add(toAdd);
+            }
+            else{
+                if(!set.isEmpty()){
+                    int index = (int)(Math.floor(Math.random()*set.size()));
+                    Integer removed = set.remove(index);
+                    tree.remove(removed);
+                }
+            }
+            if(i % 1000 == 0){
+                checkCounting(set, tree);
+            }
+            assertEquals(set.size(), tree.size());
+        }
+    }
+
+    private void checkCounting(List<Integer> expected, OrderStatisticTree<Integer> tree){
+        List<Integer> sortedExpected = new ArrayList<>(expected);
+        Collections.sort(sortedExpected);
+        int index = -1;
+        int numSameRank = 1;
+        int previousValue = -1;
+        for(Integer value: sortedExpected){
+            if(value != previousValue){
+                //check previous rank size is correct
+                if(index > -1) {
+                    //skip uninitialized case
+                    System.out.println("Check rank: "+(index+1)+" "+numSameRank);
+                    assertEquals(numSameRank, tree.getDuplicateCount(index));
+                }
+                //update to start of new rank
+                index += numSameRank;
+                numSameRank = 0;
+            }
+            numSameRank++;
+            previousValue = value;
+            System.out.println("Check rank: "+(index+1));
+            assertEquals(index+1, tree.indexOf(value) + 1);
+        }
+    }
+
 }
