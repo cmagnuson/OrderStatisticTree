@@ -1,15 +1,7 @@
 package net.coderodde.util;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.ConcurrentModificationException;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Random;
-import java.util.TreeSet;
+import java.util.*;
+
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.Before;
@@ -686,5 +678,43 @@ public class OrderStatisticTreeTest {
         assertTrue(array1before == array1after);
         assertTrue(array2before == array2after);
         assertTrue(Arrays.equals(array1after, array2after));
+    }
+
+    @Test
+    public void testRandomEntries() {
+        ArrayList<Integer> set = new ArrayList<>();
+        OrderStatisticTree<Integer> tree = new OrderStatisticTree<>();
+
+        for(int i=0; i<100_000; i++){
+            //decide randomly to add or delete, weighted towards adding
+            boolean add = Math.random() > 0.3;
+            if(add){
+                Integer toAdd = i;
+                set.add(toAdd);
+                tree.add(toAdd);
+            }
+            else{
+                if(!set.isEmpty()){
+                    int index = (int)(Math.floor(Math.random()*set.size()));
+                    Integer removed = set.remove(index);
+                    tree.remove(removed);
+                }
+            }
+            if(i % 1000 == 0){
+                checkCounting(set, tree);
+            }
+            assertEquals(set.size(), tree.size());
+        }
+    }
+
+    private void checkCounting(List<Integer> expected, OrderStatisticTree<Integer> tree){
+        List<Integer> sortedExpected = new ArrayList<>(expected);
+        Collections.sort(sortedExpected);
+        int index = 0;
+        for(Integer value: sortedExpected){
+            assertEquals(index, tree.indexOf(value));
+            assertEquals(value, tree.get(index));
+            index++;
+        }
     }
 }
