@@ -7,20 +7,19 @@ public class Node<T extends Comparable<? super T>> implements Comparable<T> {
     //set of all keys where A.compareTo(B) == 0, but !A.equals(B)
     //this set must ALWAYS BE NON-EMPTY - any removal from the set that would
     //make it empty must result in the removal of this Node
-    private Set<T> keys;
+    private Set<T> keys = new HashSet<>(1);
 
-    Node<T> parent;
-    Node<T> left;
-    Node<T> right;
+    Node<T> parent = null;
+    Node<T> left = null;
+    Node<T> right = null;
 
-    int height;
-    int count;
+    int height = 0;
+    int count = 0;
 
     Node(final T key) {
         //initialize HashSet with capacity 1 - we do not expect duplicates to be common
         //single entry is expected normal case
-        this.keys = new HashSet<>(1);
-        this.keys.add(key);
+        add(key);
     }
 
     @Override

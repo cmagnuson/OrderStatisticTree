@@ -224,8 +224,60 @@ public class OrderStatisticTreeTest {
         //check that places which were skipped because of a tie has no entries
         assertEquals(0, duplicateTree.get(3).size());
         assertEquals(0, duplicateTree.get(4).size());
+    }
 
+    @Test
+    public void testDuplicatesRandom() {
+        ArrayList<IntegerWrapper> set = new ArrayList<>();
+        OrderStatisticTree<IntegerWrapper> tree = new OrderStatisticTree<>();
 
+        int maxValue = 10_000;
+        int id = 0;
+        for(int i=0; i<100_000; i++){
+            //decide randomly to add or delete, weighted towards adding
+            boolean add = Math.random() > 0.3;
+            if(add){
+                IntegerWrapper toAdd = new IntegerWrapper((int)(Math.random()*maxValue), id++);
+                set.add(toAdd);
+                tree.add(toAdd);
+            }
+            else{
+                if(!set.isEmpty()){
+                    int index = (int)(Math.floor(Math.random()*set.size()));
+                    IntegerWrapper removed = set.remove(index);
+                    tree.remove(removed);
+                }
+            }
+            if(i % 1000 == 0){
+                checkCounting(set, tree);
+            }
+            assertEquals(set.size(), tree.size());
+        }
+    }
+
+    private void checkCounting(List<IntegerWrapper> expected, OrderStatisticTree<IntegerWrapper> tree){
+        List<IntegerWrapper> sortedExpected = new ArrayList<>(expected);
+        Collections.sort(sortedExpected);
+        int rank = 0;
+        int numSameRank = 1;
+        int previousValue = -1;
+        for(IntegerWrapper value: sortedExpected){
+            if(value.value != previousValue){
+                //check previous rank size is correct
+                if(rank > 0) {
+                    //skip uninitialized case
+                    System.out.println("Check rank: "+rank+" "+numSameRank);
+                    assertEquals(numSameRank, tree.get(rank).size());
+                }
+                //update to start of new rank
+                rank += numSameRank;
+                numSameRank = 0;
+            }
+            numSameRank++;
+            previousValue = value.value;
+            System.out.println("Check rank: "+rank);
+            assertEquals(rank, tree.rankOf(value));
+        }
     }
 
     public static class IntegerWrapper implements Comparable<IntegerWrapper> {
