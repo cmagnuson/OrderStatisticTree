@@ -1,13 +1,7 @@
 package com.mtecresults.ranking;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.ConcurrentModificationException;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * This class implements an order statistic tree which is based on AVL-trees.
@@ -180,7 +174,7 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
         return modified;
     }
 
-    private static final class Node<T> {
+    protected static final class Node<T> {
         T key;
 
         Node<T> parent;
@@ -198,6 +192,36 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
     private Node<T> root;
     private int size;
     private int modCount;
+
+    //maps from OrderStatisticTree index to offset needed to get rank
+    private TreeMap<T, Integer> offsetsMap = new TreeMap<>();
+
+    private void addDuplicate(T key){
+        //added after at least one exists
+        //if in map, increment by 1, if not add with value of 1
+        offsetsMap.put(key, offsetsMap.getOrDefault(key, 0) + 1);
+    }
+
+    //returns true if a duplicate was removed
+    //false if no duplicate removed because this was last entry
+    private boolean removeDuplicate(T key){
+        Integer oldCount = offsetsMap.get(key);
+        if(oldCount == null){
+            //no duplicate exists
+            return false;
+        }
+        else{
+            if(oldCount == 1) {
+                //last value, remove from map
+                offsetsMap.remove(key);
+            }
+            else{
+                //decrement by 1
+                offsetsMap.put(key, oldCount-1);
+            }
+            return true;
+        }
+    }
 
     @Override
     public boolean add(T element) {
@@ -218,8 +242,9 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
             cmp = element.compareTo(node.key);
 
             if (cmp == 0) {
-                // The element is already in this tree.
-                return false;
+                // The element is already in this tree, add a duplicate
+                addDuplicate(node.key);
+                return true;
             }
 
             parent = node;
@@ -293,14 +318,19 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
             return false;
         }
 
+        if(removeDuplicate(x.key)){
+            //just removed a duplicate, we can return -
+            //no need to remove node
+            return true;
+        }
+
         x = deleteNode(x);
         fixAfterModification(x, false);
         modCount += decrementSize();
         return true;
     }
 
-    @Override
-    public T get(int index) {
+    protected Node<T> getNode(int index){
         checkIndex(index);
         Node<T> node = root;
 
@@ -311,9 +341,14 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
             } else if (index < node.count) {
                 node = node.left;
             } else {
-                return node.key;
+                return node;
             }
         }
+    }
+
+    @Override
+    public T get(int index) {
+        return getNode(index).key;
     }
 
     @Override
@@ -353,6 +388,24 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
     @Override
     public int size() {
         return size;
+    }
+
+    public int sizeOfAllElements() {
+        int offsetsSum = offsetsMap.values().stream().collect(Collectors.summingInt(Integer::intValue));
+        return size + offsetsSum;
+    }
+
+    public int getDuplicateCount(T element){
+        return offsetsMap.getOrDefault(element, 0) + 1;
+    }
+
+    public int rank(T element){
+        int index = indexOf(element);
+        SortedMap<T, Integer> sm = offsetsMap.headMap(element);
+        int offsetSum = sm.values().stream().mapToInt(Integer::intValue).sum();
+
+        //add one to convert to 1-based rank
+        return index + offsetSum + 1;
     }
 
     @Override

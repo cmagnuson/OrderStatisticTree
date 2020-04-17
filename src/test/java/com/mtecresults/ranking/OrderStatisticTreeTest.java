@@ -25,7 +25,6 @@ public class OrderStatisticTreeTest {
             assertTrue(tree.isHealthy());
             assertEquals(set.contains(i), tree.contains(i));
             assertEquals(set.add(i), tree.add(i));
-            assertEquals(set.add(i), tree.add(i));
             assertEquals(set.contains(i), tree.contains(i));
 
             assertTrue(tree.isHealthy());
@@ -271,4 +270,64 @@ public class OrderStatisticTreeTest {
             assertTrue(healthy);
         }
     }
+
+
+    @Test
+    public void testDuplicatesRandom() {
+        ArrayList<Integer> set = new ArrayList<>();
+        OrderStatisticTree<Integer> tree = new OrderStatisticTree<>();
+
+        int maxValue = 10_000;
+        for(int i=0; i<100_000; i++){
+            //decide randomly to add or delete, weighted towards adding
+            boolean add = Math.random() > 0.3;
+            if(add){
+                Integer toAdd = (int)(Math.random()*maxValue);
+                set.add(toAdd);
+                tree.add(toAdd);
+            }
+            else{
+                if(!set.isEmpty()){
+                    int index = (int)(Math.floor(Math.random()*set.size()));
+                    Integer removed = set.remove(index);
+                    tree.remove(removed);
+                }
+            }
+            if(i % 1000 == 0 && !tree.isEmpty()){
+                checkCounting(set, tree);
+            }
+            assertTrue(tree.isHealthy());
+            assertEquals(set.size(), tree.sizeOfAllElements());
+        }
+    }
+
+    private void checkCounting(List<Integer> expected, OrderStatisticTree<Integer> tree){
+        List<Integer> sortedExpected = new ArrayList<>(expected);
+        Collections.sort(sortedExpected);
+        int rank = 1;
+        int numSameRank = 1;
+        int previousValue = sortedExpected.remove(0);
+        int index = 0;
+        for(Integer value: sortedExpected){
+            if(value == previousValue){
+                //duplicate encountered
+                numSameRank++;
+            }
+            else{
+                assertEquals(numSameRank, tree.getDuplicateCount(previousValue));
+
+                //not a duplicate - index should change
+                index++;
+
+                assertEquals(value, tree.get(index));
+                //reset rank count
+                rank += numSameRank;
+                //reset count of those of same rank
+                numSameRank = 1;
+            }
+            assertEquals(rank, tree.rank(value));
+            previousValue = value;
+        }
+    }
+
 }
