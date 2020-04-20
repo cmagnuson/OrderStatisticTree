@@ -295,9 +295,9 @@ public class OrderStatisticTreeTest {
             }
             if(i % 1000 == 0 && !tree.isEmpty()){
                 checkCounting(set, tree);
+                assertEquals(set.size(), tree.sizeOfAllElements());
             }
             assertTrue(tree.isHealthy());
-            assertEquals(set.size(), tree.sizeOfAllElements());
         }
     }
 

@@ -195,11 +195,15 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
 
     //maps from OrderStatisticTree index to offset needed to get rank
     private TreeMap<T, Integer> offsetsMap = new TreeMap<>();
+    //keep a count of all duplicates - makes getting size much faster
+    //if we don't need to iterate offsetsMap and sum each time
+    private int duplicatesCount = 0;
 
     private void addDuplicate(T key){
         //added after at least one exists
         //if in map, increment by 1, if not add with value of 1
         offsetsMap.put(key, offsetsMap.getOrDefault(key, 0) + 1);
+        duplicatesCount++;
     }
 
     //returns true if a duplicate was removed
@@ -219,6 +223,7 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
                 //decrement by 1
                 offsetsMap.put(key, oldCount-1);
             }
+            duplicatesCount--;
             return true;
         }
     }
@@ -391,8 +396,7 @@ public class OrderStatisticTree<T extends Comparable<? super T>>
     }
 
     public int sizeOfAllElements() {
-        int offsetsSum = offsetsMap.values().stream().collect(Collectors.summingInt(Integer::intValue));
-        return size + offsetsSum;
+        return size + duplicatesCount;
     }
 
     public int getDuplicateCount(T element){
